@@ -1,0 +1,9 @@
+# Protect secrets
+secrets/*
+!secrets/*.template
+
+# Protect sensitive data
+*.env
+*.env.*
+!*.env.template
+!*.env.*.template

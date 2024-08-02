@@ -1,0 +1,27 @@
+{
+	"dependencies": {
+		"express": "^4.19.2"
+	},
+	"name": "rcutte-curriculum-vitae",
+	"version": "1.0.0",
+	"description": "Curriculum vitae of Romain Cutte",
+	"main": "server.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node server.js",
+		"dev": "nodemon server.js",
+		"live": "live-server"
+	},
+	"keywords": [
+		"curriculum",
+		"vitae",
+		"cv",
+		"rcutte"
+	],
+	"author": "rcutte",
+	"license": "ISC",
+	"devDependencies": {
+		"nodemon": "^3.1.4",
+		"live-server": "^1.2.1"
+	}
+}

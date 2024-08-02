@@ -1,0 +1,2 @@
+# ignore node modules (we will install them in the container) with the cache
+./app/node_modules

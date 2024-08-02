@@ -1,0 +1,262 @@
+name: Inception
+
+# Setup of Containers
+services:
+  # Web server
+  nginx:
+    container_name: nginx
+    labels:
+      - com.nginx.description="Nginx Web Server"
+    build:
+      context: requirements/nginx
+      dockerfile: Dockerfile
+      args:
+        - SSL_COUNTRY = ${SSL_COUNTRY}
+        - SSL_STATE = ${SSL_STATE}
+        - SSL_LOCALITY = ${SSL_LOCALITY}
+        - SSL_ORGANIZATION = ${SSL_ORGANIZATION}
+        - SSL_ORGANIZATIONAL_UNIT = ${SSL_ORGANIZATIONAL_UNIT}
+        - SSL_COMMON_NAME = ${SSL_COMMON_NAME}
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    volumes:
+      - web:/var/www/html
+    restart: unless-stopped
+    depends_on:
+      - wordpress
+
+  # Data Base
+  mariadb:
+    container_name: mariadb
+    labels:
+      - com.mariadb.description='MariaDB Data Base'
+    build:
+      context: requirements/mariadb
+      dockerfile: Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_GRAFANA_USER: ${MYSQL_GRAFANA_USER}
+      MYSQL_GRAFANA_PASSWORD_FILE: /run/secrets/db_grafana_password
+    secrets:
+      - db_password
+      - db_root_password
+      - db_grafana_password
+    expose:
+      - "3306"
+    networks:
+      - inception
+    volumes:
+      - mariadb:/var/lib/mysql
+    restart: unless-stopped
+
+  # Wordpress and PHP 
+  wordpress:
+    container_name: wordpress
+    labels:
+      - com.wordpress.description='Wordpress and PHP Server'
+    depends_on:
+      - mariadb
+      - redis
+    build:
+      context: requirements/wordpress
+      dockerfile: Dockerfile
+    environment:
+      # Wordpress configuration
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+      WORDPRESS_URL: ${DOMAIN_NAME}
+      WORDPRESS_TITLE: ${WORDPRESS_TITLE}
+      # Wordpress user configuration
+      WORDPRESS_ADMIN_USER: ${WORDPRESS_ADMIN_USER}
+      WORDPRESS_ADMIN_USER_EMAIL: ${WORDPRESS_ADMIN_USER_EMAIL}
+      WORDPRESS_ADMIN_USER_PASSWORD_FILE: /run/secrets/wp_admin_user_password
+      WORDPRESS_USER: ${WORDPRESS_USER}
+      WORDPRESS_USER_EMAIL: ${WORDPRESS_USER_EMAIL}
+      WORDPRESS_USER_PASSWORD_FILE: /run/secrets/wp_user_password
+    secrets:
+      - db_password
+      - wp_admin_user_password
+      - wp_user_password
+    expose:
+      - "9000"
+    networks:
+      - inception
+    volumes:
+      - web:/var/www/html
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    container_name: redis
+    labels:
+      - com.redis.description='Redis - In-memory data structure store'
+    build:
+      context: requirements/bonus/redis
+      dockerfile: Dockerfile
+    expose:
+      - "6379"
+    networks:
+      - inception
+    restart: unless-stopped
+    healthcheck:
+      # Check if the Redis server is running
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  # Static Web Site
+  static:
+    container_name: static
+    labels:
+      - com.static.description='Resume of rcutte - Static Web Site with NodeJS and Express'
+    build:
+      context: requirements/bonus/static
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "7500:7500"
+    networks:
+      - inception
+    restart: unless-stopped
+    healthcheck:
+      # Check if the container is running
+      test: ["CMD", "curl", "-f", "http://localhost:7500"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  # FTP Server
+  ftp_server:
+    container_name: ftp_server
+    labels:
+    - com.ftp.description='FTP Server with ProFTPD'
+    build:
+      context: requirements/bonus/ftp
+      dockerfile: Dockerfile
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      FTP_USER: ${FTP_USER}
+      FTP_PASSWORD_FILE: /run/secrets/ftp_password
+    secrets:
+      - ftp_password
+    ports:
+      - "21:21"
+      - "20:20"
+      - "60000-60010:60000-60010"
+    networks:
+      - inception
+    volumes:
+      - web:/var/www/html/
+    restart: unless-stopped
+    healthcheck:
+      # Check if the FTP server is running
+      test: ["CMD-SHELL", "curl -v ftp://localhost:21 --user $FTP_USER:$(cat /run/secrets/ftp_password)"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  # Adminer
+  adminer:
+    container_name: adminer
+    labels:
+      - com.adminer.description='Adminer - Database management in a single PHP file'
+    depends_on:
+      - mariadb
+    build:
+      context: requirements/bonus/adminer
+      dockerfile: Dockerfile
+    ports:
+      - "7000:80"
+    networks:
+      - inception
+    restart: unless-stopped
+
+  # Grafana
+  grafana:
+    container_name: grafana
+    labels:
+      - com.grafana.description='Grafana - The open platform for beautiful analytics and monitoring'
+    depends_on:
+      - wordpress
+    build:
+      context: requirements/bonus/grafana
+      dockerfile: Dockerfile
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_GRAFANA_USER=${MYSQL_GRAFANA_USER}
+      - MYSQL_GRAFANA_PASSWORD_FILE=/run/secrets/db_grafana_password
+    secrets:
+      - db_grafana_password
+    ports:
+      - "3000:3000"
+    networks:
+      - inception
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - grafana_storage:/var/log/grafana
+    restart: unless-stopped
+
+# Secrets
+secrets:
+  # Data Base passwords
+  db_password:
+    file: ../secrets/db_password.txt
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  ## Grafana password
+  db_grafana_password:
+    file: ../secrets/db_grafana_password.txt
+  # Wordpress passwords
+  wp_admin_user_password:
+    file: ../secrets/wp_admin_user_password.txt
+  wp_user_password:
+    file: ../secrets/wp_user_password.txt
+  # FTP password
+  ftp_password:
+    file: ../secrets/ftp_password.txt
+
+# Networks
+networks:
+  inception:
+    name: inception_network
+    # Driver for the network
+    ## bridge allows containers to communicate with each other
+    driver: bridge
+
+# Volumes
+## Driver: local allows to use the local file system
+## Bind allows containers and host to share the same volume (changes in one side are reflected in the other)
+volumes:
+  # Wordpress data
+  web:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/${LOGIN}/data/web
+      o: bind
+  # MariaDB data
+  mariadb:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/${LOGIN}/data/mariadb
+      o: bind
+  # Grafana data
+  grafana_storage:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/${LOGIN}/data/grafana
+      o: bind
