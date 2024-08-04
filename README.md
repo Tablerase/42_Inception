@@ -6,6 +6,8 @@ Project to setup a stack with multiple services using **Docker and Docker Compos
 
 The stack is deployed on a **Docker Network** and the services are linked together. The services are deployed in **containers** and the data are stored in **volumes**. The stack is deployed on a **Linux** machine.
 
+🗃️ [Documentation with more infos about this Project](https://github.com/Tablerase/42_Projects/tree/main/Projects/Inception)
+
 ## Services
 
 <ul>
@@ -124,14 +126,14 @@ make help
 
 ```bash
 # Clone the repository
-git clone <link.git>
+git clone git@github.com:Tablerase/42_Inception.git
 ```
 
 ### Configuration
 
 ```bash
 # Change directory to the project
-cd <project_repo_dir>
+cd 42_Inception
 ```
 
 ```bash
