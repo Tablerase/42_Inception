@@ -4,7 +4,7 @@
 
 Project to setup a stack with multiple services using **Docker and Docker Compose**. The stack is composed of **Wordpress** website (with 2 users), **NodeJS** static website, **MariaDB** database, **Redis** cache for Wordpress, **Adminer** database manager, **Grafana** monitoring tool, **FTP Server** (with 1 user) and **Nginx** webserver with TLS (v1.2 and v1.3).
 
-The stack is deployed on a **Docker Network** and the services are linked together. The services are deployed in **containers** and the data are stored in **volumes**. The stack is deployed on a **Linux** machine.
+The services are deployed in **containers** and the data are stored in **volumes**. The services are linked inside a **Docker Network**. The stack was tested in a **Linux** machine.
 
 > [!NOTE]\
 > 🗃️ [Documentation with more infos about this Project](https://github.com/Tablerase/42_Projects/tree/main/Projects/Inception)
@@ -128,6 +128,8 @@ make help
 ```
 
 ### Installation
+
+Docker and Docker compose must be installed.
 
 ```bash
 # Clone the repository
